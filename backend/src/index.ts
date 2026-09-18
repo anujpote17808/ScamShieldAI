@@ -43,6 +43,12 @@ app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '16kb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/scans', scanRoutes);
 app.use('/api/analytics', analyticsRoutes);
+
+// Root route – confirms the service is reachable (no auth required)
+app.get('/', (_req, res) => {
+  res.status(200).json({ success: true, data: { service: 'ScamShieldAI API', status: 'running' } });
+});
+
 app.get('/api/health', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
