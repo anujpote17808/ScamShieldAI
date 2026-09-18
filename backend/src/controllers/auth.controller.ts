@@ -16,7 +16,10 @@ const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   password: z.string().min(1).max(128),
 }).strict();
-const forgotPasswordSchema = z.object({ email: z.string().trim().toLowerCase().email().max(254) }).strict();
+
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+}).strict();
 
 export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
@@ -24,11 +27,15 @@ export class AuthController {
       const { email, password, name } = registerSchema.parse(req.body);
       const passwordHash = await bcrypt.hash(password, 10);
       const { user, token } = await AuthService.register(email, passwordHash, name);
-      
+
+      // Set httpOnly cookie for same-domain / local development.
       res.cookie(JWT_COOKIE_NAME, token, getCookieOptions());
       logSecurityEvent('registration', { userId: user.id });
 
-      res.status(201).json({ success: true, data: { user } });
+      // Also include the token in the response body so cross-domain clients
+      // (e.g. Vercel frontend → Render backend) can store it in localStorage
+      // and send it as Authorization: Bearer — bypassing all cross-site cookie issues.
+      res.status(201).json({ success: true, data: { user, token } });
     } catch (error: any) {
       logSecurityEvent('auth_failure', { action: 'register', reason: error?.code || 'rejected' });
       next(error);
@@ -39,11 +46,13 @@ export class AuthController {
     try {
       const { email, password } = loginSchema.parse(req.body);
       const { user, token } = await AuthService.login(email, password);
-      
+
+      // Set httpOnly cookie for same-domain / local development.
       res.cookie(JWT_COOKIE_NAME, token, getCookieOptions());
       logSecurityEvent('auth_success', { userId: user.id });
 
-      res.status(200).json({ success: true, data: { user } });
+      // Include token in body for cross-domain Bearer token auth.
+      res.status(200).json({ success: true, data: { user, token } });
     } catch (error: any) {
       logSecurityEvent('auth_failure', { action: 'login', reason: error?.code || 'rejected' });
       next(error);
@@ -75,7 +84,10 @@ export class AuthController {
     try {
       forgotPasswordSchema.parse(req.body);
       // Password reset delivery is not implemented; retain a uniform response.
-      res.status(200).json({ success: true, message: 'If the email exists, a reset link has been sent.' });
+      res.status(200).json({
+        success: true,
+        message: 'If the email exists, a reset link has been sent.',
+      });
     } catch (error) {
       next(error);
     }
