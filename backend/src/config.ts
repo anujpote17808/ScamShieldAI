@@ -23,7 +23,11 @@ export function getCookieOptions() {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax' as const,
+    // In production the frontend and backend are on different domains (Vercel + Render).
+    // sameSite must be 'none' so the browser sends the cookie on cross-site requests.
+    // sameSite 'none' requires secure:true, which is already set in production above.
+    // In development 'lax' is fine because both run on localhost.
+    sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
     maxAge: (Number.isFinite(maxAgeDays) && maxAgeDays > 0 ? maxAgeDays : 7) * 24 * 60 * 60 * 1000,
   };
 }
