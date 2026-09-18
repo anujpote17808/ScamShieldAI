@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  scans        Scan[]
+  settings     UserSettings?
+  notifications Notification[]
+}
+
+model Scan {
+  id             String           @id @default(uuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id])
+  input          String
+  inputType      String           // "SMS" | "EMAIL" | "URL" | "CHAT"
+  target         String?
+  status         String           @default("PENDING")
+  createdAt      DateTime         @default(now())
+  completedAt    DateTime?
+  result         ScanResult?
+  indicators     ThreatIndicator[]
+}
+
+model ScanResult {
+  id             String   @id @default(uuid())
+  scanId         String   @unique
+  scan           Scan     @relation(fields: [scanId], references: [id])
+  riskScore      Int
+  riskLevel      String   // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  classification String   // "SAFE" | "SUSPICIOUS" | "PHISHING" | "SCAM" | "MALICIOUS"
+  confidence     Float
+  explanation    String
+  recommendation String
+  analysis       Json?
+  externalIntelligence Json?
+  createdAt      DateTime @default(now())
+}
+
+model ThreatIndicator {
+  id          String   @id @default(uuid())
+  scanId      String
+  scan        Scan     @relation(fields: [scanId], references: [id])
+  indicator   String
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model UserSettings {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  emailAlerts Boolean  @default(true)
+  theme       String   @default("dark")
+  updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
