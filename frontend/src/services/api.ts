@@ -3,10 +3,10 @@ import axios from 'axios';
 // ─── API Base URL ────────────────────────────────────────────────────────────
 // VITE_API_URL must be set in the Vercel environment variables.
 // Defaults to localhost only for local development.
-const configuredApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-const API_URL = configuredApiUrl.endsWith('/api')
-  ? configuredApiUrl
-  : `${configuredApiUrl}/api`;
+const configuredApiUrl = import.meta.env.VITE_API_URL || '';
+const API_URL = configuredApiUrl 
+  ? (configuredApiUrl.endsWith('/api') ? configuredApiUrl : `${configuredApiUrl}/api`)
+  : '/api';
 
 // Log the resolved URL during development so it's visible in the browser console.
 if (import.meta.env.DEV) {
