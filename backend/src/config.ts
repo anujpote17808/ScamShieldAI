@@ -7,12 +7,19 @@ export function getJwtSecret(): string {
 }
 
 export function getClientUrls(): string[] {
+  const isProduction = process.env.NODE_ENV === 'production';
   const configured = process.env.FRONTEND_URL || process.env.CLIENT_URL || '';
-  const origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175'
-  ];
+  
+  if (isProduction && !configured) {
+    throw new Error('FRONTEND_URL must be configured in production environment');
+  }
+
+  const origins: string[] = [];
+
+  // Default development origins
+  if (!isProduction) {
+    origins.push('http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175');
+  }
 
   if (configured) {
     const parts = configured.split(',').map(p => p.trim()).filter(Boolean);
@@ -24,8 +31,15 @@ export function getClientUrls(): string[] {
         }
       } catch {
         console.error(`FRONTEND_URL must be a valid explicit HTTP(S) origin, invalid part: "${part}"`);
+        if (isProduction) {
+          throw new Error(`Invalid FRONTEND_URL in production: ${part}`);
+        }
       }
     }
+  }
+
+  if (isProduction && origins.length === 0) {
+    throw new Error('No valid CORS origins found for production');
   }
 
   // Deduplicate

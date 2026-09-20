@@ -24,8 +24,21 @@ try {
   console.log('[startup] CORS origins  :', allowedOrigins.join(', '));
 } catch (err: any) {
   console.error('[startup] CORS config error:', err.message);
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
   allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
 }
+
+const dynamicCorsOrigin = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  if (!origin || allowedOrigins.includes(origin)) {
+    callback(null, true);
+  } else {
+    // Instead of throwing an error (which yields 500 Internal Server Error),
+    // we return false so Express CORS gracefully omits the headers and the browser blocks it natively.
+    callback(null, false);
+  }
+};
 
 const app = express();
 const httpServer = createServer(app);
@@ -34,7 +47,7 @@ if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
 export const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: dynamicCorsOrigin,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   },
@@ -43,7 +56,7 @@ export const io = new Server(httpServer, {
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: allowedOrigins,
+  origin: dynamicCorsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'DELETE', 'PUT'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -104,7 +117,7 @@ io.on('connection', (socket) => {
 app.use(errorHandler);
 
 // Start Server
-const PORT = process.env.PORT || 5001;
-httpServer.listen(PORT, () => {
+const PORT = Number(process.env.PORT) || 5001;
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`[startup] Server is running on port ${PORT}`);
 });
