@@ -6,15 +6,30 @@ export function getJwtSecret(): string {
   return secret;
 }
 
-export function getClientUrl(): string {
-  const configured = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
-  try {
-    const origin = new URL(configured).origin;
-    if (origin === 'null' || configured === '*') throw new Error('invalid origin');
-    return origin;
-  } catch {
-    throw new Error('FRONTEND_URL must be a valid explicit HTTP(S) origin');
+export function getClientUrls(): string[] {
+  const configured = process.env.FRONTEND_URL || process.env.CLIENT_URL || '';
+  const origins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175'
+  ];
+
+  if (configured) {
+    const parts = configured.split(',').map(p => p.trim()).filter(Boolean);
+    for (const part of parts) {
+      try {
+        const origin = new URL(part).origin;
+        if (origin !== 'null' && part !== '*') {
+          origins.push(origin);
+        }
+      } catch {
+        console.error(`FRONTEND_URL must be a valid explicit HTTP(S) origin, invalid part: "${part}"`);
+      }
+    }
   }
+
+  // Deduplicate
+  return Array.from(new Set(origins));
 }
 
 export function getCookieOptions() {
