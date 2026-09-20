@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { getClientUrl, getJwtSecret } from './config';
+import { getClientUrls, getJwtSecret } from './config';
 import prisma from './utils/prisma';
 
 dotenv.config();
@@ -18,14 +18,13 @@ console.log('[startup] DATABASE_URL  :', process.env.DATABASE_URL ? '✓ set' : 
 console.log('[startup] JWT_SECRET    :', process.env.JWT_SECRET ? '✓ set' : '✗ NOT SET – auth will fail');
 console.log('[startup] FRONTEND_URL  :', process.env.FRONTEND_URL || process.env.CLIENT_URL || '✗ NOT SET – CORS will block frontend');
 
-let allowedOrigin: string;
+let allowedOrigins: string[] = [];
 try {
-  allowedOrigin = getClientUrl();
-  console.log('[startup] CORS origin   :', allowedOrigin);
+  allowedOrigins = getClientUrls();
+  console.log('[startup] CORS origins  :', allowedOrigins.join(', '));
 } catch (err: any) {
   console.error('[startup] CORS config error:', err.message);
-  // Fall back so the server still boots; CORS will block until env is fixed.
-  allowedOrigin = 'http://localhost:5173';
+  allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
 }
 
 const app = express();
@@ -35,7 +34,7 @@ if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
 export const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigin,
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   },
@@ -44,7 +43,7 @@ export const io = new Server(httpServer, {
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: allowedOrigin,
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'DELETE', 'PUT'],
   allowedHeaders: ['Content-Type', 'Authorization'],
