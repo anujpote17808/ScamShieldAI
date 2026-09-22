@@ -3,25 +3,30 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  passwordHash  String
-  name          String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  notifications Notification[]
-  scans         Scan[]
-  settings      UserSettings?
+  id                  String               @id @default(auto()) @map("_id") @db.ObjectId
+  email               String               @unique
+  passwordHash        String
+  name                String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  passwordChangedAt   DateTime?
+  twoFactorEnabled    Boolean              @default(false)
+  notifications       Notification[]
+  scans               Scan[]
+  settings            UserSettings?
+  passwordResets      PasswordReset[]
+  sessions            AuthSession[]
+  twoFactorChallenges TwoFactorChallenge[]
 }
 
 model Scan {
-  id          String            @id @default(uuid())
-  userId      String
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String            @db.ObjectId
   input       String
   inputType   String
   createdAt   DateTime          @default(now())
@@ -34,8 +39,8 @@ model Scan {
 }
 
 model ScanResult {
-  id                   String   @id @default(uuid())
-  scanId               String   @unique
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  scanId               String   @unique @db.ObjectId
   riskScore            Int
   riskLevel            String
   classification       String
@@ -49,8 +54,8 @@ model ScanResult {
 }
 
 model ThreatIndicator {
-  id          String   @id @default(uuid())
-  scanId      String
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  scanId      String   @db.ObjectId
   indicator   String
   description String?
   createdAt   DateTime @default(now())
@@ -58,8 +63,8 @@ model ThreatIndicator {
 }
 
 model UserSettings {
-  id          String   @id @default(uuid())
-  userId      String   @unique
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @unique @db.ObjectId
   emailAlerts Boolean  @default(true)
   theme       String   @default("dark")
   updatedAt   DateTime @updatedAt
@@ -67,11 +72,58 @@ model UserSettings {
 }
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
   title     String
   message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model PasswordReset {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String    @db.ObjectId
+  email          String
+  otpHash        String
+  attempts       Int       @default(0)
+  expiresAt      DateTime
+  verifiedAt     DateTime?
+  resetTokenHash String?
+  resetUsedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id])
+
+  @@index([email])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthSession {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String    @db.ObjectId
+  tokenHash  String
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model TwoFactorChallenge {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+  usedAt    DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

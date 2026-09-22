@@ -1,16 +1,28 @@
-version: '3.8'
 services:
-  db:
-    image: postgres:15-alpine
-    restart: always
+  mongodb:
+    image: mongo:7
+    container_name: scamshield-mongodb
+    restart: unless-stopped
+
+    command:
+      - mongod
+      - --replSet
+      - rs0
+      - --bind_ip_all
+      - --keyFile
+      - /etc/mongo-keyfile
+
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: scamshield
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: scamshield
+
     ports:
-      - '5432:5432'
+      - "27017:27017"
+
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongodb_data:/data/db
+      - ./mongodb-keyfile:/etc/mongo-keyfile:ro
 
 volumes:
-  postgres_data:
+  mongodb_data:

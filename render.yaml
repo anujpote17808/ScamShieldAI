@@ -3,18 +3,43 @@ services:
     name: scamshieldai-backend
     runtime: node
     rootDir: backend
-    buildCommand: npm install && npx prisma generate && npm run build && npx prisma migrate deploy
+
+    buildCommand: npm install && npx prisma generate && npm run build && npx prisma db push
     startCommand: npm run start
+
     envVars:
       - key: NODE_ENV
         value: production
+
       - key: DATABASE_URL
         sync: false
+
       - key: JWT_SECRET
         sync: false
+
       - key: FRONTEND_URL
         sync: false
+
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+
+      - key: SMTP_PORT
+        value: "465"
+
+      - key: SMTP_SECURE
+        value: "true"
+
+      - key: SMTP_USER
+        sync: false
+
+      - key: SMTP_PASS
+        sync: false
+
+      - key: MAIL_FROM
+        sync: false
+
       - key: VIRUSTOTAL_API_KEY
         sync: false
+
       - key: GOOGLE_WEB_RISK_API_KEY
         sync: false
